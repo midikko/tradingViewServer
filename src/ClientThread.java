@@ -74,4 +74,19 @@ public class ClientThread extends Thread{
         writer.println(files);
         writer.flush();
     }
+
+    public void abort() throws IOException {
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+        writer.write("-1");
+        writer.newLine();
+        writer.flush();
+    }
+
+    @Override
+    public void interrupt() {
+        if(Main.stop){
+            System.out.println("Должен что то сделать, но просто убиваю клиентский поток.");
+        }
+        super.interrupt();
+    }
 }

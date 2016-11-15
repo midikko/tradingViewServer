@@ -11,10 +11,27 @@ public class Main {
     public static boolean stop = false;
     public static BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException, InterruptedException {
         configureLogger();
         ServerThread server = new ServerThread();
         server.start();
+        synchronized (Main.class){
+            Main.class.wait();
+        }
+        System.out.println("Сервер запущен.");
+        System.out.println("1. Просмотреть статистику");
+        System.out.println("2. Завершить работу сервера");
+        while(!stop){
+            switch (consoleReader.readLine()){
+                case "1" :{
+                    System.out.println("not inmplemented");
+                }break;
+                case "2" :{
+                    stop = true;
+                    server.turnOff();
+                }
+            }
+        }
     }
 
     public static void configureLogger(){

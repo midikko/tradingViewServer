@@ -3,14 +3,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.net.SocketTimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.logging.Level;
+import java.util.logging.SocketHandler;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,31 +20,38 @@ public  class ServerThread extends Thread{
     static String filesPath;
     int portNum;
     String serverAddress;
+    ScheduledExecutorService scheduler;
+    ExecutorService executorService;
+    boolean suspended = false;
+
 
     static private ServerThread instance;
 
     private void config(){
-        Main.logger.log(Level.INFO,"Запускаем сервер");
-        try{
-            System.out.println("Введите адрес сервера (localhost по умолчанию): ");
-            serverAddress = Main.consoleReader.readLine();
+        synchronized (Main.class) {
+            Main.logger.log(Level.INFO, "Запускаем сервер");
+            try {
+                System.out.println("Введите адрес сервера (localhost по умолчанию): ");
+                serverAddress = Main.consoleReader.readLine();
 
-            System.out.println("Введите номер порта, на котором размещен сервер (4444 по умолчанию): ");
-            String port = Main.consoleReader.readLine();
-            portNum = port.isEmpty() ? 4444 : Integer.parseInt(port);
+                System.out.println("Введите номер порта, на котором размещен сервер (4444 по умолчанию): ");
+                String port = Main.consoleReader.readLine();
+                portNum = port.isEmpty() ? 4444 : Integer.parseInt(port);
 
-            System.out.println("Введите путь к скачиваемым файлам (\"files/\" по умолчанию): ");
-            filesPath = Main.consoleReader.readLine();
-            filesPath = filesPath.isEmpty() ? "files/" : filesPath;
-        } catch (IOException e) {
-            e.printStackTrace();
+                System.out.println("Введите путь к скачиваемым файлам (\"files/\" по умолчанию): ");
+                filesPath = Main.consoleReader.readLine();
+                filesPath = filesPath.isEmpty() ? "files/" : filesPath;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            getFileNames().forEach(file -> {
+                files.put(file, 0);
+            });
+            scheduler = Executors.newScheduledThreadPool(1);
+            scheduler.scheduleAtFixedRate(new StatisticLogger(), 8, 8, TimeUnit.SECONDS);
+            executorService = Executors.newCachedThreadPool();
+            Main.class.notifyAll();
         }
-        getFileNames().forEach(file -> {
-            files.put(file,0);
-        });
-        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(new StatisticLogger(), 8, 8, TimeUnit.SECONDS);
-
     }
 
     public List<String> getFileNames() {
@@ -68,10 +72,20 @@ public  class ServerThread extends Thread{
             Main.logger.log(Level.INFO,"Адрес сервера: " + serverAddress);
             Main.logger.log(Level.INFO,"Порт сервера:" + portNum);
             Main.logger.log(Level.INFO,"Путь к директории с файлами: " + filesPath);
-            while (!serverSocket.isClosed()) {
-                ClientThread clientThread = new ClientThread(serverSocket.accept());
-                clientThread.start();
-                Main.logger.log(Level.INFO,"К серверу подключился клиент " + clientThread.getClientSocket().getInetAddress());
+            serverSocket.setSoTimeout(1000);
+            while (!suspended) {
+
+                try {
+                    ClientThread clientThread = new ClientThread(serverSocket.accept());
+                    if(Main.stop){
+                        clientThread.abort();
+                    }else{
+                        executorService.execute(clientThread);
+                        Main.logger.log(Level.INFO,"К серверу подключился клиент " + clientThread.getClientSocket().getInetAddress());
+                    }
+                }catch (SocketTimeoutException e){
+                    //просто идем дальше
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -91,6 +105,31 @@ public  class ServerThread extends Thread{
             return new File(filesPath+fileName);
         }else{
             return null;
+        }
+    }
+
+    public void turnOff() throws IOException {
+        try {
+            executorService.shutdown();
+            boolean tasksFinished = executorService.awaitTermination(1, TimeUnit.MINUTES);
+            if(tasksFinished){
+                scheduler.shutdown();
+            }else{
+                System.out.println("Некоторые клиенты выполняют длительную загрузку файлов. прервать передачу? д/н");
+                if(Main.consoleReader.readLine().equalsIgnoreCase("д")){
+                    executorService.shutdownNow();
+                }else{
+                    System.out.println("Ожидаем завершения работы клиентов.");
+                    System.out.println("Не реализовано. просто убиваем клиентов.");
+                    executorService.shutdownNow();
+                    //do smthng
+                }
+            }
+
+            //прекращаем обработку приходящих и вырубаемся
+            suspended=true;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
