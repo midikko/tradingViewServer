@@ -45,11 +45,12 @@ public class ClientThread extends Thread {
                             }
                         }
                     } catch (SocketTimeoutException e) {
-                        //ignore
+                        Main.logger.log(Level.WARNING,e.getMessage() + e.getCause());
                     }
                 }
             }
         } catch (IOException ignored) {
+            Main.logger.log(Level.WARNING,ignored.getMessage() + ignored.getCause());
         } finally {
             Main.logger.log(Level.INFO, "Клиент " + clientSocket.getInetAddress() + " отключился от сервера");
         }
