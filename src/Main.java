@@ -24,7 +24,12 @@ public class Main {
         while(!stop){
             switch (consoleReader.readLine()){
                 case "1" :{
-                    System.out.println("not inmplemented");
+                    ServerThread.getFiles()
+                            .entrySet()
+                            .stream()
+                            .forEach(entry -> {
+                                System.out.println(entry.getKey() + " -- " + entry.getValue());
+                            });
                 }break;
                 case "2" :{
                     stop = true;

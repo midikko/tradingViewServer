@@ -1,7 +1,4 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.Collections;
 
 /**
@@ -17,7 +14,7 @@ public class StatisticLogger implements Runnable {
                 file.createNewFile();
             }
             FileWriter fw = new FileWriter(file.getAbsoluteFile());
-            BufferedWriter bw = new BufferedWriter(fw);
+            PrintWriter bw = new PrintWriter(fw);
             StringBuilder statBuilder = new StringBuilder();
             ServerThread.getFiles().entrySet().stream().map(c -> {
                 return " " + c.getKey() + ":" + c.getValue();
@@ -25,7 +22,7 @@ public class StatisticLogger implements Runnable {
                 statBuilder.append(c);
             });
 
-            bw.append("\n" + statBuilder.toString());
+            bw.println(statBuilder.toString());
             bw.close();
 
         } catch (IOException e) {

@@ -1,13 +1,11 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.SocketHandler;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,7 +44,9 @@ public class ServerThread extends Thread {
                 e.printStackTrace();
             }
             getFileNames().forEach(file -> {
-                files.put(file, 0);
+                if(!files.containsKey(file)){
+                    files.put(file, 0);
+                }
             });
             scheduler = Executors.newScheduledThreadPool(1);
             scheduler.scheduleAtFixedRate(new StatisticLogger(), 8, 8, TimeUnit.SECONDS);
@@ -142,6 +142,24 @@ public class ServerThread extends Thread {
     public void incrementStatForFile(String fileName) {
         if (files.containsKey(fileName)) {
             files.put(fileName, files.get(fileName) + 1);
+        }
+    }
+
+    private void readOldStat(){
+        File statFile = new File("statistic.txt");
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(statFile.getAbsolutePath())));
+                    String string = reader.readLine();
+                    files = Arrays.stream(string.trim().split(" "))
+//                            .forEach(c -> {
+//                        String[] s = c.split(":");
+//                    });
+
+                            .collect(Collectors.toMap(c -> c.split(":")[0],c->Integer.parseInt(c.split(":")[1])));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
