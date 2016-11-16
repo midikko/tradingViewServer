@@ -1,5 +1,5 @@
 import java.io.*;
-import java.util.Collections;
+import java.util.logging.Level;
 
 /**
  * Created by midikko on 13.11.16.
@@ -10,23 +10,22 @@ public class StatisticLogger implements Runnable {
     public void run() {
         File file = new File("statistic.txt");
         try {
+            Main.logger.log(Level.INFO, "Сохраняем статистику");
             if (!file.exists()) {
                 file.createNewFile();
             }
             FileWriter fw = new FileWriter(file.getAbsoluteFile());
             PrintWriter bw = new PrintWriter(fw);
             StringBuilder statBuilder = new StringBuilder();
-            ServerThread.getFiles().entrySet().stream().map(c -> {
-                return " " + c.getKey() + ":" + c.getValue();
+            ServerThread.getFileMap().entrySet().stream().map(c -> {
+                return c.getKey() + ":" + c.getValue();
             }).forEach(c -> {
-                statBuilder.append(c);
+                bw.println(c);
             });
-
-            bw.println(statBuilder.toString());
             bw.close();
-
+            Main.logger.log(Level.INFO, "Статистика успешно сохранена");
         } catch (IOException e) {
-            e.printStackTrace();
+            Main.logger.log(Level.WARNING, e.toString());
         }
     }
 }

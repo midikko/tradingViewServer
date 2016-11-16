@@ -14,7 +14,6 @@ public class ClientThread extends Thread {
 
     public ClientThread(Socket clientSocket) {
         this.clientSocket = clientSocket;
-
     }
 
     @Override
@@ -24,7 +23,7 @@ public class ClientThread extends Thread {
             sayHello();
             while (!clientSocket.isClosed()) {
                 if (Main.stop) {
-                    this.abort();
+                    this.turnOff();
                 } else {
                     try {
                         switch (Integer.parseInt(reader.readLine())) {
@@ -45,7 +44,6 @@ public class ClientThread extends Thread {
                             }
                         }
                     } catch (SocketTimeoutException e) {
-                        Main.logger.log(Level.WARNING,e.getMessage() + e.getCause());
                     }
                 }
             }
@@ -89,7 +87,7 @@ public class ClientThread extends Thread {
         writer.flush();
     }
 
-    public void abort() throws IOException {
+    public void turnOff() throws IOException {
         writer.println("-1");
         writer.flush();
         clientSocket.close();

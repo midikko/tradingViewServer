@@ -1,6 +1,4 @@
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -24,7 +22,7 @@ public class Main {
         while(!stop){
             switch (consoleReader.readLine()){
                 case "1" :{
-                    ServerThread.getFiles()
+                    ServerThread.getFileMap()
                             .entrySet()
                             .stream()
                             .forEach(entry -> {
@@ -48,7 +46,7 @@ public class Main {
             logger.addHandler(fh);
             SimpleFormatter formatter = new SimpleFormatter();
             fh.setFormatter(formatter);
-//            logger.setUseParentHandlers(false);
+            logger.setUseParentHandlers(false);
         } catch (SecurityException e) {
             e.printStackTrace();
         } catch (IOException e) {
