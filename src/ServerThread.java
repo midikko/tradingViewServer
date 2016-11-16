@@ -14,9 +14,9 @@ import java.util.stream.Stream;
 /**
  * Created by midikko on 13.11.16.
  */
-public  class ServerThread extends Thread{
+public class ServerThread extends Thread {
 
-    static private Map<String,Integer> files = new HashMap<>();
+    static private Map<String, Integer> files = new HashMap<>();
     static String filesPath;
     int portNum;
     String serverAddress;
@@ -27,17 +27,18 @@ public  class ServerThread extends Thread{
 
     static private ServerThread instance;
 
-    private void config(){
+    private ServerThread() {
+    }
+
+    private void config() {
         synchronized (Main.class) {
             Main.logger.log(Level.INFO, "Запускаем сервер");
             try {
                 System.out.println("Введите адрес сервера (localhost по умолчанию): ");
                 serverAddress = Main.consoleReader.readLine();
-
                 System.out.println("Введите номер порта, на котором размещен сервер (4444 по умолчанию): ");
                 String port = Main.consoleReader.readLine();
                 portNum = port.isEmpty() ? 4444 : Integer.parseInt(port);
-
                 System.out.println("Введите путь к скачиваемым файлам (\"files/\" по умолчанию): ");
                 filesPath = Main.consoleReader.readLine();
                 filesPath = filesPath.isEmpty() ? "files/" : filesPath;
@@ -68,22 +69,22 @@ public  class ServerThread extends Thread{
         config();
         ServerThread.instance = this;
         try (ServerSocket serverSocket = new ServerSocket(portNum)) {
-            Main.logger.log(Level.INFO,"Сервер запущен со следующими параметрами");
-            Main.logger.log(Level.INFO,"Адрес сервера: " + serverAddress);
-            Main.logger.log(Level.INFO,"Порт сервера:" + portNum);
-            Main.logger.log(Level.INFO,"Путь к директории с файлами: " + filesPath);
+            Main.logger.log(Level.INFO, "Сервер запущен со следующими параметрами");
+            Main.logger.log(Level.INFO, "Адрес сервера: " + serverAddress);
+            Main.logger.log(Level.INFO, "Порт сервера:" + portNum);
+            Main.logger.log(Level.INFO, "Путь к директории с файлами: " + filesPath);
             serverSocket.setSoTimeout(1000);
             while (!suspended) {
-
                 try {
                     ClientThread clientThread = new ClientThread(serverSocket.accept());
-                    if(Main.stop){
+                    clientThread.getClientSocket().setSoTimeout(10000);
+                    if (Main.stop) {
                         clientThread.abort();
-                    }else{
+                    } else {
                         executorService.execute(clientThread);
-                        Main.logger.log(Level.INFO,"К серверу подключился клиент " + clientThread.getClientSocket().getInetAddress());
+                        Main.logger.log(Level.INFO, "К серверу подключился клиент " + clientThread.getClientSocket().getInetAddress());
                     }
-                }catch (SocketTimeoutException e){
+                } catch (SocketTimeoutException e) {
                     //просто идем дальше
                 }
             }
@@ -96,29 +97,34 @@ public  class ServerThread extends Thread{
         return Collections.unmodifiableMap(files);
     }
 
-    public static ServerThread getInstance(){
+    public static ServerThread getInstance() {
+        if (ServerThread.instance == null) {
+            ServerThread.instance = new ServerThread();
+        }
         return ServerThread.instance;
     }
 
-    public File getFile(String fileName){
-        if(files.containsKey(fileName)){
-            return new File(filesPath+fileName);
-        }else{
+    public File getFile(String fileName) {
+        if (files.containsKey(fileName)) {
+            return new File(filesPath + fileName);
+        } else {
             return null;
         }
     }
 
     public void turnOff() throws IOException {
         try {
+            System.out.println("Завершаем работу подключенных клиентов");
             executorService.shutdown();
             boolean tasksFinished = executorService.awaitTermination(1, TimeUnit.MINUTES);
-            if(tasksFinished){
+            if (tasksFinished) {
                 scheduler.shutdown();
-            }else{
+                System.out.println("Все клиенты успешно завершили работу. Выключаем сервер.");
+            } else {
                 System.out.println("Некоторые клиенты выполняют длительную загрузку файлов. прервать передачу? д/н");
-                if(Main.consoleReader.readLine().equalsIgnoreCase("д")){
+                if (Main.consoleReader.readLine().equalsIgnoreCase("д")) {
                     executorService.shutdownNow();
-                }else{
+                } else {
                     System.out.println("Ожидаем завершения работы клиентов.");
                     System.out.println("Не реализовано. просто убиваем клиентов.");
                     executorService.shutdownNow();
@@ -127,15 +133,15 @@ public  class ServerThread extends Thread{
             }
 
             //прекращаем обработку приходящих и вырубаемся
-            suspended=true;
+            suspended = true;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     public void incrementStatForFile(String fileName) {
-        if(files.containsKey(fileName)){
-            files.put(fileName, files.get(fileName)+1);
+        if (files.containsKey(fileName)) {
+            files.put(fileName, files.get(fileName) + 1);
         }
     }
 }

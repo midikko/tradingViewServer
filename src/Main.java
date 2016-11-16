@@ -13,7 +13,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, InterruptedException {
         configureLogger();
-        ServerThread server = new ServerThread();
+        ServerThread server = ServerThread.getInstance();
         server.start();
         synchronized (Main.class){
             Main.class.wait();
